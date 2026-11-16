@@ -1,5 +1,12 @@
 package com.ahmedmunna.ipcall.ui
 
+import android.app.Activity
+import android.content.Context
+import android.media.RingtoneManager
+import android.net.Uri
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MusicNote
+
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -209,6 +216,7 @@ fun SettingsScreen(onAbout: () -> Unit) {
                         keepAlive = it
                         sip.setKeepAlive(it)
                     }
+                    RingtoneRows()
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -315,5 +323,96 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
                 uncheckedBorderColor = Color.Transparent
             )
         )
+    }
+}
+
+private fun ringtoneTitle(ctx: Context, v: String): String = when (v) {
+    "" -> "Default"
+    "silent" -> "Silent"
+    else -> try {
+        RingtoneManager.getRingtone(ctx, Uri.parse(v))?.getTitle(ctx)?.takeIf { it.isNotBlank() } ?: "Custom file"
+    } catch (_: Throwable) {
+        "Custom file"
+    }
+}
+
+@Composable
+private fun RingtoneRows() {
+    val style = LocalGlassStyle.current
+    val ctx = LocalContext.current
+    var current by remember { mutableStateOf(Prefs.ringtone) }
+    val title = remember(current) { ringtoneTitle(ctx, current) }
+
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode == Activity.RESULT_OK) {
+            @Suppress("DEPRECATION")
+            val uri: Uri? = r.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            Prefs.ringtone = uri?.toString() ?: "silent"
+            current = Prefs.ringtone
+        }
+    }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Throwable) {
+            }
+            Prefs.ringtone = uri.toString()
+            current = Prefs.ringtone
+        }
+    }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                try {
+                    val existing: Uri? = when (current) {
+                        "" -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                        "silent" -> null
+                        else -> Uri.parse(current)
+                    }
+                    val i = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_RINGTONE)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Incoming call ringtone")
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, existing)
+                    }
+                    picker.launch(i)
+                } catch (_: Throwable) {
+                }
+            }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Filled.MusicNote, null, tint = style.subtle, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Incoming ringtone", color = style.content, fontWeight = FontWeight.Medium)
+            Text(title, color = style.subtle, fontSize = 12.sp, maxLines = 1)
+        }
+        Icon(Icons.Filled.ChevronRight, null, tint = style.subtle)
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                try {
+                    filePicker.launch(arrayOf("audio/*"))
+                } catch (_: Throwable) {
+                }
+            }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Filled.FolderOpen, null, tint = style.subtle, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Choose audio file", color = style.content, fontWeight = FontWeight.Medium)
+            Text("Use any MP3 / audio file from your phone as ringtone", color = style.subtle, fontSize = 12.sp)
+        }
+        Icon(Icons.Filled.ChevronRight, null, tint = style.subtle)
     }
 }

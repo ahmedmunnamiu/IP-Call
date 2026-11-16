@@ -1,6 +1,7 @@
 package com.ahmedmunna.ipcall.ui
 
 import android.media.AudioManager
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -90,21 +91,27 @@ fun GlassCard(
 }
 
 /**
- * Full-screen overlay (call screen, about). Draws the blurred app background fully opaque plus a soft scrim,
- * so nothing from the screens underneath (dialpad etc.) shows through, and swallows touches.
+ * Full-screen overlay (call screen, about). It is a completely separate, 100% opaque page: a solid base
+ * colour + the theme's gradient + a scrim. Nothing from the screens underneath can show through, and it swallows touches.
  */
 @Composable
 fun GlassScreen(content: @Composable BoxScope.() -> Unit) {
-    val layer = LocalBackdrop.current
     val style = LocalGlassStyle.current
+    val theme = LocalThemeState.current
+    val preset = Presets[theme.preset.coerceIn(0, Presets.lastIndex)]
     Box(
         Modifier
             .fillMaxSize()
             .drawBehind {
-                if (layer != null) drawLayer(layer)
+                drawRect(if (style.dark) Color(0xFF0A1020) else Color(0xFFEAF1FA))
                 drawRect(
-                    if (style.dark) Color.Black.copy(alpha = 0.40f) else Color.White.copy(alpha = 0.35f)
+                    Brush.linearGradient(
+                        preset.base.map { it.copy(alpha = 1f) },
+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, size.height)
+                    )
                 )
+                drawRect(if (style.dark) Color.Black.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.25f))
             }
             .pointerInput(Unit) { detectTapGestures { } },
         content = content
