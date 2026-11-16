@@ -1,6 +1,9 @@
 package com.ahmedmunna.ipcall.ui
 
 import android.media.AudioManager
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import android.media.ToneGenerator
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -86,13 +89,24 @@ fun GlassCard(
     Column(modifier.glass(shape, boost), content = content)
 }
 
-/** Full-screen glass sheet used for overlays (call screen, about). Covers everything beneath it. */
+/**
+ * Full-screen overlay (call screen, about). Draws the blurred app background fully opaque plus a soft scrim,
+ * so nothing from the screens underneath (dialpad etc.) shows through, and swallows touches.
+ */
 @Composable
 fun GlassScreen(content: @Composable BoxScope.() -> Unit) {
+    val layer = LocalBackdrop.current
+    val style = LocalGlassStyle.current
     Box(
         Modifier
             .fillMaxSize()
-            .glass(RectangleShape, boost = 0.10f, rim = false),
+            .drawBehind {
+                if (layer != null) drawLayer(layer)
+                drawRect(
+                    if (style.dark) Color.Black.copy(alpha = 0.40f) else Color.White.copy(alpha = 0.35f)
+                )
+            }
+            .pointerInput(Unit) { detectTapGestures { } },
         content = content
     )
 }

@@ -1,5 +1,16 @@
 package com.ahmedmunna.ipcall.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.ui.graphics.vector.ImageVector
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -75,6 +86,14 @@ fun AboutScreen(onBack: () -> Unit) {
                                 "AHMED MUNNA", color = style.content, fontSize = 26.sp,
                                 fontWeight = FontWeight.Bold, letterSpacing = 2.sp, textAlign = TextAlign.Center
                             )
+                            Spacer(Modifier.height(18.dp))
+                            ContactLine(Icons.Filled.Phone, "Mobile", "+8801625104847") {
+                                openLink(ctx, Intent(Intent.ACTION_DIAL, Uri.parse("tel:+8801625104847")))
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            ContactLine(Icons.Filled.Public, "Facebook", "facebook.com/ahmedmunna0") {
+                                openLink(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("https://facebook.com/ahmedmunna0")))
+                            }
                         }
                     }
                 }
@@ -106,6 +125,33 @@ fun AboutScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(28.dp))
             }
+        }
+    }
+}
+
+private fun openLink(ctx: Context, intent: Intent) {
+    try {
+        ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (_: Throwable) {
+    }
+}
+
+@Composable
+private fun ContactLine(icon: ImageVector, label: String, value: String, onClick: () -> Unit) {
+    val style = LocalGlassStyle.current
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .glass(RoundedCornerShape(16.dp), boost = 0.02f)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = style.content, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(label, color = style.subtle, fontSize = 11.sp)
+            Text(value, color = style.content, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

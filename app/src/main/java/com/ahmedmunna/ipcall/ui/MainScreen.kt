@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
@@ -102,6 +103,7 @@ fun MainScreen(onAbout: () -> Unit) {
                         onCall = { micGuard { sip.placeCall(number) } }
                     )
                     1 -> RecentsScreen(onCall = { n -> micGuard { sip.placeCall(n) } })
+                    2 -> ContactsScreen(onCall = { n -> micGuard { sip.placeCall(n) } })
                     else -> SettingsScreen(onAbout = onAbout)
                 }
             }
@@ -116,7 +118,8 @@ private fun GlassNavBar(selected: Int, onSelect: (Int) -> Unit) {
     val items = listOf(
         Triple(Icons.Filled.Dialpad, "Keypad", 0),
         Triple(Icons.Filled.History, "Recents", 1),
-        Triple(Icons.Filled.Settings, "Settings", 2)
+        Triple(Icons.Filled.Contacts, "Contacts", 2),
+        Triple(Icons.Filled.Settings, "Settings", 3)
     )
     BoxWithConstraints(
         Modifier
@@ -125,7 +128,7 @@ private fun GlassNavBar(selected: Int, onSelect: (Int) -> Unit) {
             .height(66.dp)
             .glass(RoundedCornerShape(33.dp), boost = 0.04f)
     ) {
-        val itemW = maxWidth / 3
+        val itemW = maxWidth / 4
         val x by animateDpAsState(
             targetValue = itemW * selected,
             animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
