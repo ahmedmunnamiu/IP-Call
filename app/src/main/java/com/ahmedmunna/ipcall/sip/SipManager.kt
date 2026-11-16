@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Intent
 import android.media.Ringtone
 import android.media.RingtoneManager
+import android.net.Uri
+import android.os.PowerManager
 import android.os.Build
 import android.os.SystemClock
 import android.os.VibrationEffect
@@ -80,6 +82,8 @@ class SipManager(private val app: Application) {
     private var timeoutJob: Job? = null
     private var endJob: Job? = null
     private var ringtone: Ringtone? = null
+    private var ringtoneKey: String? = null
+    private var proxLock: PowerManager.WakeLock? = null
 
     // ------------------------------------------------------------------ init
 
@@ -89,6 +93,8 @@ class SipManager(private val app: Application) {
         core = factory.createCore(null, null, app)
         core.addListener(listener)
         core.start()
+        // turn the display off when the phone is held to the ear during a call
+        scope.launch { call.collect { updateProximity() } }
 
         val acc = core.defaultAccount ?: core.accountList.firstOrNull()
         if (acc != null) {
@@ -304,15 +310,39 @@ class SipManager(private val app: Application) {
 
     // ------------------------------------------------------------------ ringing
 
+    private fun updateProximity() {
+        try {
+            val c = call.value
+            val want = c != null && c.phase != CallPhase.Incoming && c.phase != CallPhase.Ended && !c.speaker
+            val pm = app.getSystemService(PowerManager::class.java) ?: return
+            if (want) {
+                if (proxLock == null && pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+                    proxLock = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "ipcall:proximity")
+                        .also { it.setReferenceCounted(false) }
+                }
+                if (proxLock?.isHeld == false) proxLock?.acquire(4 * 60 * 60 * 1000L)
+            } else if (proxLock?.isHeld == true) {
+                proxLock?.release()
+            }
+        } catch (_: Throwable) {
+        }
+    }
+
     private fun startRinging() {
         try {
-            if (ringtone == null) {
-                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                ringtone = RingtoneManager.getRingtone(app, uri)?.also {
-                    if (Build.VERSION.SDK_INT >= 28) it.isLooping = true
+            val pref = Prefs.ringtone
+            if (pref != "silent") {
+                if (ringtone == null || ringtoneKey != pref) {
+                    ringtone?.stop()
+                    val def = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    val uri = if (pref.isEmpty()) def else Uri.parse(pref)
+                    ringtone = (RingtoneManager.getRingtone(app, uri) ?: RingtoneManager.getRingtone(app, def))?.also {
+                        if (Build.VERSION.SDK_INT >= 28) it.isLooping = true
+                    }
+                    ringtoneKey = pref
                 }
+                ringtone?.takeIf { !it.isPlaying }?.play()
             }
-            ringtone?.takeIf { !it.isPlaying }?.play()
             app.getSystemService(Vibrator::class.java)
                 ?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 800, 800), 0))
         } catch (_: Throwable) {
