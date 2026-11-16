@@ -1,2 +1,0 @@
--keep class org.linphone.** { *; }
--keep class org.linphone.core.** { *; }
