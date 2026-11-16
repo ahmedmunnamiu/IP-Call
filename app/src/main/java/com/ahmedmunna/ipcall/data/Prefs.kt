@@ -44,4 +44,8 @@ object Prefs {
     var keepAlive: Boolean
         get() = getBool("keep_alive", true)
         set(v) = putBool("keep_alive", v)
+    /** "" = system default, "silent" = no sound, otherwise a ringtone / audio file URI. */
+    var ringtone: String
+        get() = getString("ringtone", "")
+        set(v) = putString("ringtone", v)
 }
